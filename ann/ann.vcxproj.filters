@@ -19,10 +19,16 @@
     <ClInclude Include="linalg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ann.h">
+    <ClInclude Include="nnet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="anndata.h">
+    <ClInclude Include="func.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="optim.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
