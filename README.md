@@ -1,7 +1,7 @@
 # matura-project-nn
 This is a simple neural network library written in C++ as part of my matura project.
 
-There is no support for fancy stuff like LSTMs, convolutional layers or even softmax and cross-entropy. Still, it does work for the MNIST dataset, the "Hello World" of neural networks, correctly predicting about 90% of the test set on a good day.
+There is no support for fancy stuff like autograd, convolutional layers or even softmax and cross-entropy. Still, it does work for the MNIST dataset, the "Hello World" of neural networks, correctly predicting about 90% of the test set on a good day.
 While all of this code is written by me, some inspiration regarding the overall structure and naming has been taken from popular neural network libraries such as pytorch.
 
 ### Some examples how one would use this "library"<br/>
