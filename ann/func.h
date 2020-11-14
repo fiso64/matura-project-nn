@@ -3,7 +3,6 @@
 
 namespace func
 {
-    namespace lin = linalg;
     typedef linalg::Vector<float> Vectorf;
     typedef linalg::Matrix<float> Matrixf;
 

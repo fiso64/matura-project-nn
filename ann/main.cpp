@@ -1,10 +1,3 @@
-//The following is an implementation of a simple neural network for MNIST number classification. 
-//As you will be probably able to tell, I don't know shit about C++, and I started this project with very little prior experience.
-//Still I chose to do it in C++, to "learn a cool new language", and considering the short amount of time I had and the immensity of C++, this now seems to be 
-//nothing but an excuse for my apparent masochistic tendencies. Really, all I learned here is to be mortally afraid of C++.
-
-// “Life is hard without a garbage collector” - Gandhi
-
 #include <iostream>
 #include <locale>
 #include <codecvt>
