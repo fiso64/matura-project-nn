@@ -10,41 +10,43 @@ namespace optim
     class IOptimizable
     {
     public:
+        linalg::Matrix<float> weights;
         virtual void update(float lr) = 0;
         virtual void zeroGrad() = 0;
     };
 
-    //Stochastic gradient descent optimizer
-    template <class IOPTIMIZABLE_ONLY(T)>
+    //Stochastic gradient descent optimizer (so far it's not much of an optimizer, the steps are still done on the layers)
     class SGD
     {
     public:
-        float initialLearningRate;
-        float learningRate;
-        float lrDecaySpeed;
+        float initialLearnRate;
+        float learnRate;
+        float learnRateDecaySpeed;
         int callCount = 0;
-        std::vector<T*> parameters;
+        std::vector<IOptimizable*> parameters;
     public:
         //IN: IOptimizable parameters, learning rate, decay speed of learning rate
+        template <class T>
         SGD(std::vector<T*> params, float lr, float decaySpeed = 0)
         {
-            parameters = params;
-            initialLearningRate = lr;
-            learningRate = lr;
-            lrDecaySpeed = decaySpeed;
+            parameters.assign(params.begin(), params.end());
+            initialLearnRate = lr;
+            learnRate = lr;
+            learnRateDecaySpeed = decaySpeed;
         }
 
         //Updates each element with learning rate
         void step()
         {
-            if (lrDecaySpeed != 0) {
-                learningRate = initialLearningRate * (1 / (1 + sqrt(callCount * lrDecaySpeed)));
+            if (learnRateDecaySpeed != 0) {
+                learnRate = initialLearnRate * (1 / (1 + sqrt(callCount * learnRateDecaySpeed)));
                 callCount++;
             }
             for (int i = 0; i < parameters.size(); i++) {
-                parameters[i]->update(learningRate);
+                parameters[i]->update(learnRate);
             }
         }
+
         //Sets the accumulated gradient of each element to zeros
         void zeroGrad()
         {

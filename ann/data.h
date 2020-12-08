@@ -18,25 +18,28 @@ namespace data
 	typedef linalg::Matrix<float> Matrixf;
 	typedef std::vector<InputLabelPair> Batch;
     
-    //A std::vector of inputs with a corresponding std::vector of labels
+    //A vector of inputs with a corresponding vector of labels
     struct InputLabelPair
     {
         Vectorf* input;
         Vectorf* label;
+        Vectorf a;
     };
 
     class IDataSet
     {
     public:
-        int totalNumItems; //number of items in the dataset
-        int inputSize; //size of the input std::vector
-        int labelSize; //size of the label std::vector
+        int size; //number of items in the dataset
+        int inputSize; //size of the input vectors
+        int labelSize; //size of the label vectors
     public:
         //Get a single InputLabelPair from the data.
         //IN: index
         virtual InputLabelPair getItem(int ind) = 0;
+
         virtual void shuffle() = 0;
     };
+
     class MNIST : public IDataSet
     {
     public:
@@ -53,7 +56,27 @@ namespace data
             inputPath = ipath;
             labelPath = lpath;
             loadData();
-            if (verbose) std::cout << totalNumItems << " items loaded from '" << ipath << "'\n";
+            if (verbose) std::cout << size << " items loaded from '" << ipath << "'\n";
+        }
+        //Creates a MNIST dataset from the default directory if files are present
+        //IN: "train" or "test"
+        MNIST(std::string type, bool verbose = true)
+        {
+            std::string dataDir = getDefaultDataPath();
+            if (type == "train") {
+                inputPath = dataDir + "train-images.idx3-ubyte";
+                labelPath = dataDir + "train-labels.idx1-ubyte";
+            }
+            else if (type == "test") {
+                inputPath = dataDir + "t10k-images.idx3-ubyte";
+                labelPath = dataDir + "t10k-labels.idx1-ubyte";
+            }
+            else {
+                std::cout << "Invalid MNIST constructor argument. Only \"train\" or \"test\".";
+            }
+
+            loadData();
+            if (verbose) std::cout << size << " items loaded from '" << inputPath << "'\n";
         }
 
         InputLabelPair getItem(int ind) override
@@ -63,15 +86,16 @@ namespace data
             ilpair.label = &labelData[ind];
             return ilpair;
         }
+
         void shuffle() override
         {
-            std::vector<Vectorf> shuffledInputData(totalNumItems, Vectorf(inputSize));
-            std::vector<Vectorf> shuffledLabelData(totalNumItems, Vectorf(labelSize));
-            std::vector<int> shuffledNums(totalNumItems);
-            for (int i = 0; i < totalNumItems; ++i) { shuffledNums[i] = i; }
+            std::vector<Vectorf> shuffledInputData(size, Vectorf(inputSize));
+            std::vector<Vectorf> shuffledLabelData(size, Vectorf(labelSize));
+            std::vector<int> shuffledNums(size);
+            for (int i = 0; i < size; ++i) { shuffledNums[i] = i; }
             unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
             std::shuffle(shuffledNums.begin(), shuffledNums.end(), std::default_random_engine(seed));
-            for (int i = 0; i < totalNumItems; i++) {
+            for (int i = 0; i < size; i++) {
                 shuffledInputData[i] = inputData[shuffledNums[i]];
                 shuffledLabelData[i] = labelData[shuffledNums[i]];
             }
@@ -103,7 +127,7 @@ namespace data
             }
         }
     protected:
-        //Write from the ubyte mnist files to the input and label std::vectors.
+        //Write from the ubyte mnist files to the input and label vectors.
         void loadData() 
         {
             inputifs.open(inputPath, std::ios::binary);
@@ -113,14 +137,14 @@ namespace data
             }
             int rows, cols;
             inputifs.seekg(sizeof(int));
-            inputifs.read((char*)&totalNumItems, sizeof(totalNumItems));
+            inputifs.read((char*)&size, sizeof(size));
             inputifs.read((char*)&rows, sizeof(rows));
             inputifs.read((char*)&cols, sizeof(cols));
             rows = _byteswap_ulong(rows);
             cols = _byteswap_ulong(cols);
 
             //###################################
-            totalNumItems = _byteswap_ulong(totalNumItems);
+            size = _byteswap_ulong(size);
             inputSize = rows * cols;
             labelSize = 10;
             //###################################
@@ -131,11 +155,11 @@ namespace data
                 throw std::runtime_error("");
             }
 
-            inputData.reserve(totalNumItems);
-            labelData.reserve(totalNumItems);
+            inputData.reserve(size);
+            labelData.reserve(size);
             inputifs.seekg(4 * sizeof(int));
             labelifs.seekg(2 * sizeof(int));
-            for (int i = 0; i < totalNumItems; i++) {
+            for (int i = 0; i < size; i++) {
                 Vectorf inputVec(inputSize);
                 Vectorf labelVec(labelSize, linalg::zeros);
                 byte* inputByteArr = new byte[inputSize];
@@ -149,6 +173,21 @@ namespace data
                 labelData.push_back(labelVec);
                 inputData.push_back(inputVec);
             }
+        }
+
+        std::string getDefaultDataPath()
+        {
+            TCHAR buffer[MAX_PATH] = { 0 };
+            GetModuleFileName(NULL, buffer, MAX_PATH);
+            std::wstring str;
+            std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+            str = std::wstring(buffer).substr(0, pos);
+            pos = std::wstring(str).find_last_of(L"\\/");
+            str = std::wstring(str).substr(0, pos);
+            using convert_type = std::codecvt_utf8<wchar_t>;
+            std::wstring_convert<convert_type, wchar_t> converter;
+            std::string dir = converter.to_bytes(str) + R"(\data_mnist\)";
+            return dir;
         }
     };
 
@@ -170,14 +209,15 @@ namespace data
             restartAfterEndReached = loop;
             if (shuffle) dataSet.shuffle();
         }
-        //Get a batch of a size.
+
+        //Get a batch of InputLabelPairs.
         //IN: size of the batch to return
-        //OUT: a batch of size 'size'
+        //OUT: a batch of InputLabelPairs of the specified size
         Batch next(int batSize = -1)
         {
             if (batSize == -1) batSize = batchSize;
-            if (!endReached && curPos + batSize >= dataSet.totalNumItems) {
-                batSize = dataSet.totalNumItems - curPos;
+            if (!endReached && curPos + batSize >= dataSet.size) {
+                batSize = dataSet.size - curPos;
                 endReached = true;
             }
             else if (endReached) { endReached = false; }
@@ -188,21 +228,28 @@ namespace data
                 curPos++;
             }
 
-            if (endReached && restartAfterEndReached) { curPos = 0; }
+            if (endReached && restartAfterEndReached) curPos = 0;
             return batch;
         }
+
         //Return all items from the dataset in one batch.
         //OUT: batch of size dataSet.totalNumItems containing all items of the dataset.
         Batch all()
         {
             curPos = 0;
-            Batch batch(dataSet.totalNumItems);
-            for (size_t i = 0; i < dataSet.totalNumItems; i++) {
+            Batch batch(dataSet.size);
+            for (size_t i = 0; i < dataSet.size; i++) {
                 batch[i] = dataSet.getItem(curPos);
                 curPos++;
             }
             if (restartAfterEndReached) curPos = 0;
             return batch;
+        }
+
+        void reset()
+        {
+            curPos = 0;
+            endReached = false;
         }
     };
 }

@@ -24,13 +24,14 @@ namespace linalg
     enum initType { zeros, ones, number, identity, uniform, normal };
     template <class NUMERIC_ONLY(T)>
     class Matrix;
+
     template <class NUMERIC_ONLY(T)>
     class Vector
     {
     public:
         std::vector<T> nums;
         size_t size;
-
+    public:
         Vector()
         {
             size = 0;
@@ -54,7 +55,7 @@ namespace linalg
         }
         Vector(std::initializer_list<T> initNums)
         {
-            size = distance(initNums.begin(), initNums.end());
+            size = std::distance(initNums.begin(), initNums.end());
             nums = std::vector<T>(size);
             int i = 0;
             for (T num : initNums) { nums[i] = num; i++; }
@@ -144,23 +145,27 @@ namespace linalg
             for (int i = size - elems / 2; i < size; i++) { std::cout << ", " << nums[i]; }
             std::cout << "]\n";
         }
+
         T dot(Vector vec)
         {
             T res = 0;
             for (int i = 0; i < size; i++) { res += nums[i] * vec.nums[i]; }
             return res;
         }
+
         Matrix<T> transposed()
         {
             Matrix<T> newMat(size, 1, nums);
             return newMat;
         }
+
         float magnitude()
         {
             float res = 0;
             for (int i = 0; i < size; i++) { res += nums[i] * nums[i]; }
             return sqrt(res);
         }
+
         T sum()
         {
             T res = 0;
@@ -169,6 +174,7 @@ namespace linalg
             }
             return res;
         }
+
         Matrix<T> asMatrix(int m = 1, int n = -1)
         {
             if (n == -1) n = size;
@@ -178,6 +184,7 @@ namespace linalg
 
         T& operator [] (int i) { return nums[i]; }
     };
+
     template <class NUMERIC_ONLY(T)>
     class Matrix
     {
@@ -186,7 +193,7 @@ namespace linalg
         int rows;
         int cols;
         int size;
-        
+    public:
         Matrix()
         {
             rows = 0;
@@ -327,6 +334,7 @@ namespace linalg
             }
             std::cout << "]]\n";
         }
+
         Matrix transposed()
         {
             Matrix newMat(cols, rows);
@@ -346,18 +354,21 @@ namespace linalg
             }
             return newMat;
         }
+
         T det(Matrix* mat = this)
         {
             if (rows != cols) return 0;
             //do something recursive
             return T;
         }
+
         Vector<T>* eigen()
         {
             Vector<T>* eigenVecs = new Vector<T>[cols];
             //do something, yes
             return eigenVecs;
         }
+
         T sum()
         {
             T res = 0;
@@ -366,6 +377,7 @@ namespace linalg
             }
             return res;
         }
+
         Vector<T> asVector()
         {
             Vector<T> newVec(*this);
@@ -374,6 +386,7 @@ namespace linalg
        
         T* operator [](int m) { return &(nums[m * cols]); }
     };
+
 
     /// Matrix operations ///
     template <class T>
