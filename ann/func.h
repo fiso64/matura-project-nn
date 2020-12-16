@@ -27,8 +27,8 @@ namespace func
         //OUT: new std::vector with each element newVec[i] = forward(vec[i])
         virtual Vectorf forward(Vectorf& vec)
         {
-            Vectorf newVec(vec.size);
-            for (size_t i = 0; i < vec.size; i++) {
+            Vectorf newVec(vec.size());
+            for (size_t i = 0; i < vec.size(); i++) {
                 newVec[i] = forward(vec[i]);
             }
             return newVec;
@@ -39,8 +39,8 @@ namespace func
         //OUT: new Vectorf with each element newVec[i] = backward(vec[i])
         virtual Vectorf backward(Vectorf& inVec, Vectorf& inGradVec)
         {
-            Vectorf newVec(inVec.size);
-            for (size_t i = 0; i < inVec.size; i++) {
+            Vectorf newVec(inVec.size());
+            for (size_t i = 0; i < inVec.size(); i++) {
                 newVec[i] = backward(inVec[i], inGradVec[i]);
             }
             return newVec;
@@ -55,7 +55,6 @@ namespace func
             return forward(vec);
         }
     };
-
     //Abstract class for differentiable loss functions
     class ALossFunction
     {
@@ -119,8 +118,8 @@ namespace func
             lReLU(float grad_ = 0.01F) { grad = grad_; }
         };
 
-        //standard logistic function
-        class stdLogistic : public AActFunction
+        //sigmoid function
+        class sigmoid : public AActFunction
         {
             float forward(float x) override
             {
@@ -135,11 +134,11 @@ namespace func
             }
         public:
             float squeeze;
-            stdLogistic(float squeeze_ = 50) { squeeze = squeeze_; }
+            sigmoid(float squeeze_ = 50) { squeeze = squeeze_; }
         };
 
         //standard logistic function between -5 and 5, otherwise returns 0 and 1 respectively
-        class stdLogisticLinearEnds : public AActFunction
+        class logisticLinearEnds : public AActFunction
         {
             float forward(float x) override
             {
@@ -157,7 +156,7 @@ namespace func
             }
         public:
             float squeeze;
-            stdLogisticLinearEnds(float squeeze_ = 100) { squeeze = squeeze_; }
+            logisticLinearEnds(float squeeze_ = 100) { squeeze = squeeze_; }
         };
 
         //softmax function, not working as of now
@@ -181,30 +180,30 @@ namespace func
             }
             Vectorf forward(Vectorf& vec) override
             {
-                Vectorf expVec(vec.size);
+                Vectorf expVec(vec.size());
                 float expSum = 0;
-                for (size_t i = 0; i < expVec.size; i++) {
+                for (size_t i = 0; i < expVec.size(); i++) {
                     float e = exp(vec[i]);
                     expVec[i] = e;
                     expSum += e;
                 }
-                Vectorf newVec(vec.size);
-                for (size_t i = 0; i < vec.size; i++) {
+                Vectorf newVec(vec.size());
+                for (size_t i = 0; i < vec.size(); i++) {
                     newVec[i] = expVec[i] / expSum;
                 }
                 return newVec;
             }
             Vectorf backward(Vectorf& sums, Vectorf& sumGrad) override
             {
-                Vectorf expVec(sums.size);
+                Vectorf expVec(sums.size());
                 float expSum = 0;
-                for (size_t i = 0; i < expVec.size; i++) {
+                for (size_t i = 0; i < expVec.size(); i++) {
                     float e = exp(sums[i]);
                     expVec[i] = e;
                     expSum += e;
                 }
-                Vectorf newSumGrad(sums.size);
-                for (size_t i = 0; i < sums.size; i++) {
+                Vectorf newSumGrad(sums.size());
+                for (size_t i = 0; i < sums.size(); i++) {
                     newSumGrad[i] = ((expSum * expVec[i]) / pow((expSum + expVec[i]), 2)) * sumGrad[i];
                 }
                 return newSumGrad;
@@ -236,32 +235,71 @@ namespace func
                 return exp(x);
             }
         };
+
+        //linear activation
+        class linear : public AActFunction
+        {
+            float forward(float x) override
+            {
+                return grad * x;
+            }
+            float gradient(float x) override
+            {
+                return grad;
+            }
+        public:
+            float grad;
+            linear(float grad_ = 0.01F) { grad = grad_; }
+        };
     }
+
     //loss functions
     namespace loss
     {
         //mean squared error loss
         class MSE : public ALossFunction
         {
-            Vectorf forward(Vectorf& vec1, Vectorf& vec2) override
+            Vectorf forward(Vectorf& outs, Vectorf& labels) override
             {
-                Vectorf newVec(vec1.size);
-                for (size_t i = 0; i < vec1.size; i++) {
-                    newVec[i] = pow((vec1[i] - vec2[i]), 2) / (2 * vec1.size);
+                Vectorf newVec(outs.size());
+                for (size_t i = 0; i < outs.size(); i++) {
+                    newVec[i] = pow((outs[i] - labels[i]), 2) / (2 * outs.size());
                 }
                 return newVec;
             }
-            Vectorf backward(Vectorf& vec1, Vectorf& vec2) override
+            Vectorf backward(Vectorf& outs, Vectorf& labels) override
             {
-                Vectorf newVec(vec1.size);
-                for (size_t i = 0; i < vec1.size; i++) {
-                    newVec[i] = (vec1[i] - vec2[i]) / vec1.size;
+                Vectorf newVec(outs.size());
+                for (size_t i = 0; i < outs.size(); i++) {
+                    newVec[i] = (outs[i] - labels[i]) / outs.size();
                 }
                 return newVec;
             }
         };
 
-        //cross-entropy loss, not done
+        //loss for logistic regression
+        class Logistic : public ALossFunction
+        {
+            Vectorf forward(Vectorf& outs, Vectorf& labels) override
+            {
+                Vectorf newVec(outs.size());
+                for (size_t i = 0; i < outs.size(); i++) {
+                    newVec[i] = labels[i] * log(outs[i]) + (1 - labels[i]) * log(1 - outs[i]);
+                }
+                return newVec;
+            }
+            Vectorf backward(Vectorf& outs, Vectorf& labels) override
+            {
+                Vectorf newVec(outs.size());
+                for (size_t i = 0; i < outs.size(); i++) {
+                    newVec[i] = - (outs[i] - labels[i]) / (outs[i] * (1 - outs[i]));
+                }
+                newVec.print();
+                return newVec;
+            }
+        };
+
+        //cross-entropy loss, not done yet
         class CrossEntropy : public ALossFunction
         {
         public:
@@ -271,22 +309,23 @@ namespace func
             }
             Vectorf forward(Vectorf& netOut, Vectorf& label) override
             {
-                Vectorf newVec(netOut.size);
-                for (size_t i = 0; i < netOut.size; i++) {
+                Vectorf newVec(netOut.size());
+                for (size_t i = 0; i < netOut.size(); i++) {
                     newVec[i] = -(label[i] * log(netOut[i] + 0.00001));
                 }
                 return newVec;
             }
             Vectorf backward(Vectorf& netOut, Vectorf& label) override
             {
-                Vectorf newVec(netOut.size);
-                for (size_t i = 0; i < netOut.size; i++) {
+                Vectorf newVec(netOut.size());
+                for (size_t i = 0; i < netOut.size(); i++) {
                     newVec[i] = -(label[i] / netOut[i]);
                 }
                 return newVec;
             }
         };
     }
+
     //weight initialization functions
     namespace weightInit
     {

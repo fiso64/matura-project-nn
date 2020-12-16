@@ -12,6 +12,7 @@
 
 #define NUMERIC_ONLY(T) T, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
 
+//Why use a well-optimized and bugfree linear algebra library if you can make your own?
 namespace linalg
 {
     //The way a matrix or std::vector should be initialized. The constructor takes an initType, along with a list of optional arguments.
@@ -30,60 +31,53 @@ namespace linalg
     {
     public:
         std::vector<T> nums;
-        size_t size;
     public:
         Vector()
         {
-            size = 0;
             nums = std::vector<T>();
         }
         Vector(int s, T* varr = NULL)
         {
-            size = s;
-            if (varr != NULL) { nums.assign(varr, varr + size); }
-            else nums = std::vector<T>(size);
+            if (varr != NULL) { nums.assign(varr, varr + s); }
+            else nums = std::vector<T>(s);
         }
         Vector(std::vector<T> varr)
         {
-            size = varr.size();
             nums = varr;
         }
         Vector(Matrix<T>& mat)
         {
-            size = mat.size;
             nums = mat.nums;
         }
         Vector(std::initializer_list<T> initNums)
         {
-            size = std::distance(initNums.begin(), initNums.end());
-            nums = std::vector<T>(size);
+            int s = std::distance(initNums.begin(), initNums.end());
+            nums = std::vector<T>(s);
             int i = 0;
             for (T num : initNums) { nums[i] = num; i++; }
         }
         Vector(int s, std::function<T(int)> initFunc)
         {
-            size = s;
-            nums = std::vector<T>(size);
+            nums = std::vector<T>(s);
             for (int i = 0; i < size; i++) { nums[i] = initFunc(i); }
         }
         Vector(int s, initType type, std::initializer_list<T> args = {})
         {
-            size = s;
-            nums = std::vector<T>(size);
+            nums = std::vector<T>(s);
         retryInitType:
             switch (type)
             {
             case linalg::zeros:
-                for (int i = 0; i < size; i++) { nums[i] = 0; }
+                for (int i = 0; i < size(); i++) { nums[i] = 0; }
                 break;
             case linalg::ones:
-                for (int i = 0; i < size; i++) { nums[i] = 1; }
+                for (int i = 0; i < size(); i++) { nums[i] = 1; }
                 break;
             case linalg::number:
                 if (args.size() > 0)
                 {
                     T num = *(args.begin());
-                    for (int i = 0; i < size; i++) { nums[i] = num; }
+                    for (int i = 0; i < size(); i++) { nums[i] = num; }
                 }
                 break;
             case linalg::uniform:
@@ -98,7 +92,7 @@ namespace linalg
                     std::random_device dev;
                     std::default_random_engine gen(dev());
                     std::uniform_real_distribution<T> dis(min, max);
-                    for (int i = 0; i < size; i++) { nums[i] = dis(gen); }
+                    for (int i = 0; i < size(); i++) { nums[i] = dis(gen); }
                 }
                 break;
             }
@@ -114,7 +108,7 @@ namespace linalg
                     std::random_device dev;
                     std::default_random_engine gen(dev());
                     std::normal_distribution<T> dis(mean, stddev);
-                    for (int i = 0; i < size; i++) { nums[i] = dis(gen); }
+                    for (int i = 0; i < size(); i++) { nums[i] = dis(gen); }
                 }
                 break;
             }
@@ -131,7 +125,7 @@ namespace linalg
         {
             if (newLines) std::cout << std::endl;
             std::cout << str << " [" << nums[0];
-            for (int i = 1; i < size; i++) { std::cout << ", " << nums[i]; }
+            for (int i = 1; i < size(); i++) { std::cout << ", " << nums[i]; }
             std::cout << "]";
             std::cout << str2;
             if (newLines) std::cout << std::endl;
@@ -146,30 +140,35 @@ namespace linalg
             std::cout << "]\n";
         }
 
-        T dot(Vector vec)
+        int size() const
         {
-            T res = 0;
-            for (int i = 0; i < size; i++) { res += nums[i] * vec.nums[i]; }
-            return res;
+            return nums.size();
         }
 
-        Matrix<T> transposed()
-        {
-            Matrix<T> newMat(size, 1, nums);
-            return newMat;
-        }
-
-        float magnitude()
+        float magnitude() const
         {
             float res = 0;
             for (int i = 0; i < size; i++) { res += nums[i] * nums[i]; }
             return sqrt(res);
         }
 
+        T dot(Vector vec)
+        {
+            T res = 0;
+            for (int i = 0; i < size(); i++) { res += nums[i] * vec.nums[i]; }
+            return res;
+        }
+
+        Matrix<T> transposed()
+        {
+            Matrix<T> newMat(size(), 1, nums);
+            return newMat;
+        }
+
         T sum()
         {
             T res = 0;
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size(); i++) {
                 res += nums[i];
             }
             return res;
@@ -177,7 +176,7 @@ namespace linalg
 
         Matrix<T> asMatrix(int m = 1, int n = -1)
         {
-            if (n == -1) n = size;
+            if (n == -1) n = size();
             Matrix<T> newMat(m, n, *this);
             return newMat;
         }
@@ -192,43 +191,37 @@ namespace linalg
         std::vector<T> nums;
         int rows;
         int cols;
-        int size;
     public:
         Matrix()
         {
             rows = 0;
             cols = 0;
-            size = 0;
             nums = std::vector<T>();
         }
         Matrix(int m, int n, T* marr = NULL)
         {
             rows = m;
             cols = n;
-            size = m * n;
-            if (marr != NULL) { nums.assign(marr, marr + size); }
-            else nums = std::vector<T>(size);
+            if (marr != NULL) { nums.assign(marr, marr + m * n); }
+            else nums = std::vector<T>(m * n);
         }
         Matrix(int m, int n, std::vector<T> marr)
         {
             rows = m;
             cols = n;
-            size = m * n;
             nums = marr;
         }
         Matrix(int m, int n, Vector<T>& vec)
         {
             rows = m;
             cols = n;
-            size = m * n;
             nums = vec.nums;
         }
         Matrix(int m, int n, std::initializer_list<T> initNums)
         {
             rows = m;
             cols = n;
-            size = m * n;
-            nums = std::vector<T>(size);
+            nums = std::vector<T>(m * n);
             int i = 0;
             for (T num : initNums) { nums[i] = num; i++; }
         }
@@ -236,29 +229,27 @@ namespace linalg
         {
             rows = m;
             cols = n;
-            size = m * n;
-            nums = std::vector<T>(size);
+            nums = std::vector<T>(m * n);
             for (int i = 0; i < size; i++) { nums[i] = initFunc(i); }
         }
         Matrix(int m, int n, initType type, std::initializer_list<T> args = {})
         {
             rows = m;
             cols = n;
-            size = m * n;
-            nums = std::vector<T>(size);
+            nums = std::vector<T>(m * n);
             switch (type)
             {
             case linalg::zeros:
-                for (int i = 0; i < size; i++) { nums[i] = 0; }
+                for (int i = 0; i < size(); i++) { nums[i] = 0; }
                 break;
             case linalg::ones:
-                for (int i = 0; i < size; i++) { nums[i] = 1; }
+                for (int i = 0; i < size(); i++) { nums[i] = 1; }
                 break;
             case linalg::number:
                 if (args.size() > 0)
                 {
                     T num = *(args.begin());
-                    for (int i = 0; i < size; i++) { nums[i] = num; }
+                    for (int i = 0; i < size(); i++) { nums[i] = num; }
                 }
                 break;
             case linalg::uniform:
@@ -271,7 +262,7 @@ namespace linalg
                     std::random_device dev;
                     std::default_random_engine gen(dev());
                     std::uniform_real_distribution<T> dis(min, max);
-                    for (int i = 0; i < size; i++) { nums[i] = dis(gen); }
+                    for (int i = 0; i < size(); i++) { nums[i] = dis(gen); }
                 }
                 break;
             }
@@ -286,13 +277,13 @@ namespace linalg
                     std::random_device dev;
                     std::default_random_engine gen(dev());
                     std::normal_distribution<T> dis(mean, stddev);
-                    for (int i = 0; i < size; i++) { nums[i] = dis(gen); }
+                    for (int i = 0; i < size(); i++) { nums[i] = dis(gen); }
                 }
                 break;
             }
             case linalg::identity:
-                for (int i = 0; i < size; i++) { nums[i] = 0; }
-                for (int i = 0; i < size; i += rows + 1) { nums[i] = 1; }
+                for (int i = 0; i < size(); i++) { nums[i] = 0; }
+                for (int i = 0; i < size(); i += rows + 1) { nums[i] = 1; }
                 break;
             default:
                 break;
@@ -335,12 +326,17 @@ namespace linalg
             std::cout << "]]\n";
         }
 
+        int size() const
+        {
+            return nums.size();
+        }
+
         Matrix transposed()
         {
             Matrix newMat(cols, rows);
             if (cols == 1 || rows == 1)
             {
-                for (int i = 0; i < newMat.size; i++)
+                for (int i = 0; i < newMat.size(); i++)
                 {
                     newMat.nums[i] = nums[i];
                 }
@@ -400,7 +396,7 @@ namespace linalg
     Matrix<T> operator + (const Matrix<T>& X, const Matrix<T>& Y)
     {
         Matrix<T> newMat(X.rows, X.cols);
-        for (int i = 0; i < X.size; i++) { newMat.nums[i] = X.nums[i] + Y.nums[i]; }
+        for (int i = 0; i < X.size(); i++) { newMat.nums[i] = X.nums[i] + Y.nums[i]; }
         return newMat;
     }
     template <class T, class NUMERIC_ONLY(U)>
@@ -412,7 +408,7 @@ namespace linalg
     }
     template <class T>
     Matrix<T>& operator += (Matrix<T>& X, const Matrix<T>& Y) {
-        for (int i = 0; i < X.size; i++) { (X.nums)[i] += (Y.nums)[i]; }
+        for (int i = 0; i < X.size(); i++) { (X.nums)[i] += (Y.nums)[i]; }
         return X;
     }
     template <class T, class NUMERIC_ONLY(U)>
@@ -438,7 +434,7 @@ namespace linalg
     }
     template <class T>
     Matrix<T>& operator -= (Matrix<T>& X, const Matrix<T>& Y) {
-        for (int i = 0; i < X.size; i++) { (X.nums)[i] -= (Y.nums)[i]; }
+        for (int i = 0; i < X.size(); i++) { (X.nums)[i] -= (Y.nums)[i]; }
         return X;
     }
     template <class T, class NUMERIC_ONLY(U)>
@@ -453,7 +449,7 @@ namespace linalg
     {
         Matrix<T> newMat(X.rows, Y.cols);
         int x1, x2;
-        for (int i = 0; i < newMat.size; i++)
+        for (int i = 0; i < newMat.size(); i++)
         {
             newMat.nums[i] = 0;
             x1 = i / newMat.cols * X.cols;
@@ -469,7 +465,7 @@ namespace linalg
     Matrix<T> operator * (const Matrix<T>& X, U a)
     {
         Matrix<T> newMat(X.rows, X.cols);
-        for (int i = 0; i < X.size; i++) { newMat.nums[i] = X.nums[i] * a; }
+        for (int i = 0; i < X.size(); i++) { newMat.nums[i] = X.nums[i] * a; }
         return newMat;
     }
     template <class T>
@@ -477,11 +473,11 @@ namespace linalg
     {
         int x = 0;
         Vector<T> newVec(X.rows);
-        for (int i = 0; i < newVec.size; i++)
+        for (int i = 0; i < newVec.size(); i++)
         {
             newVec.nums[i] = 0;
             x = i * X.cols;
-            for (int j = 0; j < vec.size; j++)
+            for (int j = 0; j < vec.size(); j++)
             {
                 newVec.nums[i] += X.nums[x + j] * vec.nums[j];
             }
@@ -490,7 +486,7 @@ namespace linalg
     }
     template <class T, class NUMERIC_ONLY(U)>
     Matrix<T>& operator *= (Matrix<T>& X, U a) {
-        for (int i = 0; i < X.size; i++) { X.nums[i] *= a; }
+        for (int i = 0; i < X.size(); i++) { X.nums[i] *= a; }
         return X;
     }
 
@@ -505,8 +501,8 @@ namespace linalg
     template <class T>
     Vector<T> operator + (const Vector<T>& X, const Vector<T>& Y)
     {
-        Vector<T> newVec(X.size);
-        for (int i = 0; i < X.size; i++) { newVec.nums[i] = X.nums[i] + Y.nums[i]; }
+        Vector<T> newVec(X.size());
+        for (int i = 0; i < X.size(); i++) { newVec.nums[i] = X.nums[i] + Y.nums[i]; }
         return newVec;
     }
     template <class T, class NUMERIC_ONLY(U)>
@@ -518,7 +514,7 @@ namespace linalg
     }
     template <class T>
     Vector<T>& operator += (Vector<T>& X, const Vector<T>& Y) {
-        for (int i = 0; i < X.size; i++) { (X.nums)[i] += (Y.nums)[i]; }
+        for (int i = 0; i < X.size(); i++) { (X.nums)[i] += (Y.nums)[i]; }
         return X;
     }
     template <class T, class NUMERIC_ONLY(U)>
@@ -544,7 +540,7 @@ namespace linalg
     }
     template <class T>
     Vector<T>& operator -= (Vector<T>& X, const Vector<T>& Y) {
-        for (int i = 0; i < X.size; i++) { (X.nums)[i] -= (Y.nums)[i]; }
+        for (int i = 0; i < X.size(); i++) { (X.nums)[i] -= (Y.nums)[i]; }
         return X;
     }
     template <class T, class NUMERIC_ONLY(U)>
@@ -564,13 +560,13 @@ namespace linalg
     template <class T, class NUMERIC_ONLY(U)>
     Vector<T> operator * (const Vector<T>& X, U a)
     {
-        Vector<T> newVec(X.size);
-        for (int i = 0; i < X.size; i++) { newVec.nums[i] = X.nums[i] * a; }
+        Vector<T> newVec(X.size());
+        for (int i = 0; i < X.size(); i++) { newVec.nums[i] = X.nums[i] * a; }
         return newVec;
     }
     template <class T, class NUMERIC_ONLY(U)>
     Vector<T>& operator *= (Vector<T>& X, U a) {
-        for (int i = 0; i < X.size; i++) { X.nums[i] *= a; }
+        for (int i = 0; i < X.size(); i++) { X.nums[i] *= a; }
         return X;
     }
 }

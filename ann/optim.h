@@ -26,7 +26,7 @@ namespace optim
         std::vector<IOptimizable*> parameters;
     public:
         //IN: IOptimizable parameters, learning rate, decay speed of learning rate
-        template <class T>
+        template <class IOPTIMIZABLE_ONLY(T)>
         SGD(std::vector<T*> params, float lr, float decaySpeed = 0)
         {
             parameters.assign(params.begin(), params.end());

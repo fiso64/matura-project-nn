@@ -55,7 +55,7 @@ namespace nnet
     public:
         //IN: amount of inputs, amount of outputs, activation function, weight initialization function
         template <class T>
-        Linear(int inChan, int outChan, T, bool bias_ = false, std::function<Matrixf(int, int)> weightInit = func::weightInit::heInitHalfStd)
+        Linear(int inChan, int outChan, T, bool bias_ = true, std::function<Matrixf(int, int)> weightInit = func::weightInit::heInitHalfStd)
         {
             //static_assert(std::is_base_of<func::AActFunction, T>::value);
             bias = bias_;
@@ -70,7 +70,7 @@ namespace nnet
             biasesGradSum = Vectorf(outChan, lin::zeros);
         }
         template <class T>
-        Linear(int inChan, int outChan, T* fptr, bool bias_ = false, std::function<Matrixf(int, int)> weightInit = func::weightInit::heInitHalfStd)
+        Linear(int inChan, int outChan, T* fptr, bool bias_ = true, std::function<Matrixf(int, int)> weightInit = func::weightInit::heInitHalfStd)
         {
             //static_assert(std::is_base_of<func::AActFunction, T>::value);
             bias = bias_;
@@ -161,7 +161,7 @@ namespace nnet
         Vectorf* output; //the outputs of the last layer
     public:
         //IN: Any amount of layers, loss function
-        template <class T, class U>
+        template <class ILAYER_ONLY(T), class U>
         Network(std::initializer_list<T*> lrs, U& lossFnc, std::function<Matrixf(int, int)> weightInit = NULL, float weightsMult = 1)
             : lossFunc(lossFnc) 
         {
@@ -184,7 +184,7 @@ namespace nnet
 
             output = &(layers[layers.size() - 1]->outs);
         }
-        template <class T, class U>
+        template <class ILAYER_ONLY(T), class U>
         Network(std::initializer_list<T*> lrs, U* lossFncPtr, std::function<Matrixf(int, int)> weightInit = NULL, float weightsMult= 1)
             : lossFunc(*lossFncPtr)
         {
@@ -207,6 +207,7 @@ namespace nnet
 
             output = &(layers[layers.size() - 1]->outs);
         }
+
         ~Network()
         {
             delete lossFuncPtr;

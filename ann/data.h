@@ -51,16 +51,16 @@ namespace data
         std::vector<Vectorf> labelData;
     public:
         //IN: input file path, label file path
-        MNIST(std::string ipath, std::string lpath, bool verbose = true)
+        MNIST(std::string ipath, std::string lpath)
         {
             inputPath = ipath;
             labelPath = lpath;
             loadData();
-            if (verbose) std::cout << size << " items loaded from '" << ipath << "'\n";
+            std::cout << size << " items loaded from '" << ipath << "'\n";
         }
         //Creates a MNIST dataset from the default directory if files are present
         //IN: "train" or "test"
-        MNIST(std::string type, bool verbose = true)
+        MNIST(std::string type)
         {
             std::string dataDir = getDefaultDataPath();
             if (type == "train") {
@@ -76,7 +76,7 @@ namespace data
             }
 
             loadData();
-            if (verbose) std::cout << size << " items loaded from '" << inputPath << "'\n";
+            std::cout << size << " items loaded from '" << inputPath << "'\n";
         }
 
         InputLabelPair getItem(int ind) override
@@ -132,7 +132,7 @@ namespace data
         {
             inputifs.open(inputPath, std::ios::binary);
             if (!inputifs.good()) {
-                std::cout << "\nInput file does not exist: '" << inputPath << "'\n";
+                std::cout << "\nInput file not found: '" << inputPath << "'\n";
                 throw std::runtime_error(""); //too lazy to write try and catch
             }
             int rows, cols;
@@ -150,8 +150,8 @@ namespace data
             //###################################
 
             labelifs.open(labelPath, std::ios::binary);
-            if (!inputifs.good()) {
-                std::cout << "\nLabel file does not exist: '" << labelPath << "'\n";
+            if (!labelifs.good()) {
+                std::cout << "\nLabel file not found: '" << labelPath << "'\n";
                 throw std::runtime_error("");
             }
 
@@ -194,20 +194,38 @@ namespace data
     //Holds a ADataSet object and is resposible for getting batches from it.
     class DataLoader
     {
+    protected:
+        bool _endReached = false;
+        bool _restart = false;
     public:
         int curPos = 0;
         int batchSize = 1;
-        bool endReached = false;
         bool restartAfterEndReached;
         bool shuffled;
         IDataSet& dataSet;
     public:
-        DataLoader(IDataSet& datSet, int batSize = 1, bool shuffle = true, bool loop = true) : dataSet(datSet)
+        DataLoader(IDataSet& datSet, int batSize = 1, bool shuffle = true, bool autoLoop = true) : dataSet(datSet)
         {
             batchSize = batSize;
             shuffled = shuffle;
-            restartAfterEndReached = loop;
+            restartAfterEndReached = autoLoop;
             if (shuffle) dataSet.shuffle();
+        }
+
+        //checks if end has been reached, resets to false if called a second time and if restartAfterEndReached=true
+        //for use in loops
+        bool endReached()
+        {
+            _restart = restartAfterEndReached && !_restart && _endReached;
+            if (_restart) {
+                curPos = 0;
+                _endReached = false;
+                _restart = false;
+                return true;
+            }
+            else {
+                return _endReached;
+            }
         }
 
         //Get a batch of InputLabelPairs.
@@ -216,11 +234,10 @@ namespace data
         Batch next(int batSize = -1)
         {
             if (batSize == -1) batSize = batchSize;
-            if (!endReached && curPos + batSize >= dataSet.size) {
+            if (curPos + batSize >= dataSet.size) {
                 batSize = dataSet.size - curPos;
-                endReached = true;
+                _endReached = true;
             }
-            else if (endReached) { endReached = false; }
 
             Batch batch(batSize);
             for (size_t i = 0; i < batSize; i++) {
@@ -228,7 +245,7 @@ namespace data
                 curPos++;
             }
 
-            if (endReached && restartAfterEndReached) curPos = 0;
+            if (_endReached && restartAfterEndReached) curPos = 0;
             return batch;
         }
 
@@ -242,14 +259,20 @@ namespace data
                 batch[i] = dataSet.getItem(curPos);
                 curPos++;
             }
-            if (restartAfterEndReached) curPos = 0;
+            if (restartAfterEndReached) {
+                curPos = 0;
+                _endReached = false;
+            }
+            else {
+                _endReached = true;
+            }
             return batch;
         }
 
         void reset()
         {
             curPos = 0;
-            endReached = false;
+            _endReached = false;
         }
     };
 }
