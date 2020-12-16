@@ -15,7 +15,7 @@
 //Why use a well-optimized and bugfree linear algebra library if you can make your own?
 namespace linalg
 {
-    //The way a matrix or std::vector should be initialized. The constructor takes an initType, along with a list of optional arguments.
+    //Use as a constructor argument of Matrix or Vector to specify the initialization.
     //zeros: set each element to 0
     //ones: set each element to 1
     //number: set each element to (first arg)
