@@ -23,7 +23,7 @@ nnet::Network net({
 
 ##### Create an optimizer:
 ```cpp
-//create stochastic gradient descent optimizer with learn rate=0.1 and learn rate decay speed=0.001
+//create stochastic gradient descent optimizer with learn rate=0.1 and learn rate decay speed=0.01
 optim::SGD optimizer(net.layers, 0.1, 0.01);
 ```
 
