@@ -1,7 +1,6 @@
 This is a simple neural network library written in C++ as part of my matura project.
 
-There is no support for fancy stuff like autograd, convolutional layers, or even softmax or cross-entropy. Still, it does work for the MNIST dataset, the "Hello World" of neural networks, correctly predicting about 95% of the test set on a good day.
-While all of this code was written by me, inspiration regarding the overall structure and naming has been taken from popular neural network libraries such as pytorch.
+While all of this code was written by me, inspiration regarding the general structure and naming has been taken from popular neural network libraries such as pytorch.
 
 ##### Create a data loader:
 ```cpp
